@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="Gradle: F./Printer/PrinterExample_com/app/libs/printer_library.jar">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/app/libs/printer_library.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

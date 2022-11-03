@@ -386,7 +386,8 @@ public class TempletPrintActivity extends BaseActivity {
             @Override
             public void run() {
                 try {
-                    templetDemo.escTemplet();
+                  //  templetDemo.escTemplet();
+                    templetDemo.escMyTemplet();
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 } catch (SdkException e) {

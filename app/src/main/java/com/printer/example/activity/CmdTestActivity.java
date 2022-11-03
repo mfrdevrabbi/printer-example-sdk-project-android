@@ -1,8 +1,8 @@
 package com.printer.example.activity;
 
 import android.app.Activity;
-import android.support.annotation.NonNull;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
