@@ -9,6 +9,8 @@ package com.printer.example.utils;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Build;
+import android.support.annotation.RequiresApi;
 import android.util.Log;
 
 import com.printer.example.R;
@@ -42,6 +44,7 @@ import com.rt.printerlibrary.setting.TextSetting;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
 
 public class TempletDemo {
     private RTPrinter rtPrinter;
@@ -382,6 +385,106 @@ public class TempletDemo {
 
         rtPrinter.writeMsgAsync(escCmd.getAppendCmds());
     }
+
+
+
+
+    public void escMyTemplet() throws UnsupportedEncodingException, SdkException {
+
+        String subBranch = "Mugda Sub-Branch";
+        String tokenNo = "Token No:Z002";
+        String suggestion = "VIP Banking Customer (Please Proceed to Branch Manager)";
+        String dataTime = null;
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            dataTime = LocalDateTime.now().toString();
+        }
+        String welcomeText = "Welcome to Dutch Bangla Bank";
+
+
+        CmdFactory escFac = new EscFactory();
+        Cmd escCmd = escFac.create();
+        escCmd.setChartsetName("UTF-8");
+
+
+        BitmapSetting bitmapSetting = new BitmapSetting();
+        bitmapSetting.setBimtapLimitWidth(300);//限制图片最大宽度 58打印机=48mm， 80打印机=72mm
+
+        Bitmap bmp  = BitmapFactory.decodeResource(context.getResources(), R.drawable.dbbl_icon);
+
+        escCmd.append(escCmd.getBitmapCmd(bitmapSetting, Bitmap.createBitmap(bmp)));
+        escCmd.append(escCmd.getLFCRCmd());  //icon
+
+        escCmd.append(escCmd.getTextCmd(getSubHeaderTextStyle(), subBranch)); //"Mugda Sub-Branch";
+        escCmd.append(escCmd.getLFCRCmd());//回车换行
+        escCmd.append(escCmd.getLFCRCmd());//回车换行
+
+        escCmd.append(escCmd.getTextCmd(getTicketNoTextStyle(), tokenNo));//"Token No:Z002";
+        escCmd.append(escCmd.getLFCRCmd());
+        escCmd.append(escCmd.getLFCRCmd());
+
+
+        escCmd.append(escCmd.getTextCmd(getSuggestionTextStyle(), suggestion));
+        escCmd.append(escCmd.getLFCRCmd());
+
+        escCmd.append(escCmd.getTextCmd(getDateTimeStyle(), dataTime));
+        escCmd.append(escCmd.getLFCRCmd());
+
+        escCmd.append(escCmd.getTextCmd(getWelcomeTextStyle(), welcomeText));
+        escCmd.append(escCmd.getLFCRCmd());
+
+
+
+        escCmd.append(escCmd.getLFCRCmd());
+        escCmd.append(escCmd.getCmdCutNew());//切刀指令
+
+        rtPrinter.writeMsgAsync(escCmd.getAppendCmds());
+    }
+
+    private TextSetting getWelcomeTextStyle() {
+        final TextSetting textSetting = new TextSetting();
+        textSetting.setIsAntiWhite(SettingEnum.Disable);//反白
+        textSetting.setAlign(CommonEnum.ALIGN_LEFT);//对齐方式-左对齐，居中，右对齐
+        textSetting.setBold(SettingEnum.Enable);
+        return textSetting;
+    }
+
+    private TextSetting getDateTimeStyle() {
+        final TextSetting textSetting = new TextSetting();
+        textSetting.setIsAntiWhite(SettingEnum.Disable);//反白
+        textSetting.setAlign(CommonEnum.ALIGN_LEFT);//对齐方式-左对齐，居中，右对齐
+        textSetting.setBold(SettingEnum.Enable);
+        textSetting.setIsEscSmallCharactor(SettingEnum.Enable);
+        return textSetting;
+    }
+
+    private TextSetting getSuggestionTextStyle() {
+        final TextSetting textSetting = new TextSetting();
+        textSetting.setIsAntiWhite(SettingEnum.Disable);//反白
+        textSetting.setAlign(CommonEnum.ALIGN_LEFT);//对齐方式-左对齐，居中，右对齐
+        textSetting.setBold(SettingEnum.Enable);
+        textSetting.setIsAntiWhite(SettingEnum.Disable);//反白
+        return textSetting;
+    }
+
+    private TextSetting getTicketNoTextStyle() {
+        final TextSetting textSetting = new TextSetting();
+        textSetting.setAlign(CommonEnum.ALIGN_LEFT);//对齐方式-左对齐，居中，右对齐
+        textSetting.setBold(SettingEnum.Enable);
+        textSetting.setIsAntiWhite(SettingEnum.Disable);//反白
+        textSetting.setDoubleWidth(SettingEnum.Enable);
+        textSetting.setDoubleHeight(SettingEnum.Enable);
+        return textSetting;
+    }
+
+    private TextSetting getSubHeaderTextStyle() {
+       final TextSetting textSetting = new TextSetting();
+        textSetting.setBold(SettingEnum.Enable);
+        textSetting.setAlign(CommonEnum.ALIGN_LEFT);//对齐方式-左对齐，居中，右对齐
+        textSetting.setIsAntiWhite(SettingEnum.Disable);//反白
+        return textSetting;
+    }
+
+
     public void esc80TempPrint() {
 
         CmdFactory escFac = new EscFactory();
