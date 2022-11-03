@@ -1,0 +1,206 @@
+package com.printer.example.utils;
+
+import android.util.Log;
+
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketTimeoutException;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Created by Kaeson on 2020/7/21.
+ *
+ */
+public abstract class IpScanner extends Thread {
+    private static final String TAG = "IpScanner";
+
+    private static final String DEVICE_FIND_CMD = "MP4200FIND";
+    private static final String DEVICE_FIND_MSG_HEADER = "MP4200FOUND";
+    private static final int DEVICE_FIND_PORT = 1460; //协议使用的端口 udp port
+    private static final int RECEIVE_TIME_OUT = 2000; // 接收超时时间 time out
+    private static final int RESPONSE_DEVICE_MAX = 200; // 响应设备的最大个数，防止UDP广播攻击 max device
+
+    private DatagramSocket hostSocket;
+    private List<DeviceBean> mDeviceList;
+
+    protected IpScanner() {
+        mDeviceList = new ArrayList<>();
+    }
+
+    @Override
+    public void run() {
+        try {
+            onSearchStart();
+            hostSocket = new DatagramSocket();
+            hostSocket.setSoTimeout(RECEIVE_TIME_OUT);
+
+            byte[] sendData = new byte[1024];
+            byte[] receData = new byte[1024];
+            InetAddress broadIP = InetAddress.getByName("255.255.255.255");
+            DatagramPacket sendPack = new DatagramPacket(sendData, sendData.length, broadIP, DEVICE_FIND_PORT);
+
+            for (int count = 0; count < 3; count++) {
+                // 发送搜索广播 Send UDP broadcast
+                byte[] bytes = DEVICE_FIND_CMD.getBytes();
+                sendPack.setData(bytes);
+                hostSocket.setBroadcast(true);
+                hostSocket.send(sendPack);
+
+                // 监听来信 monitor
+                DatagramPacket recePack = new DatagramPacket(receData, receData.length);
+                try {
+                    int rspCount = RESPONSE_DEVICE_MAX;
+                    while (rspCount-- > 0) {
+                        recePack.setData(receData);
+                        hostSocket.receive(recePack);
+
+                        addDevices(recePack,receData);
+
+                    }
+                } catch (SocketTimeoutException e) {
+                }
+                Log.i(TAG, "IpScanner finished @" + count);
+            }
+            onSearchFinish(mDeviceList);
+        } catch (IOException e) {
+            e.printStackTrace();
+            onSearchError(e.getMessage());
+        } finally {
+            if (hostSocket != null) {
+                hostSocket.close();
+            }
+        }
+
+    }
+
+    /*
+    * 解析协议，添加搜索到设备 add the searched device
+    *
+    * @param datagramPacket
+    * @param bytes 接收到的数据
+    * */
+    private void addDevices(DatagramPacket datagramPacket, byte[] bytes) {
+        if (datagramPacket.getLength() > 0) {
+            String deviceIP = datagramPacket.getAddress().getHostAddress();
+            //do not add devices with same ip
+            for (DeviceBean d : mDeviceList) {
+                if (d.getDeviceIp().equals(deviceIP)) {
+                    Log.d(TAG,"IP add before");
+                    return;
+                }
+            }
+            //解析设备信息 parse
+            if(bytes.length <=0){
+                return;
+            }
+            byte[] tempBytes = new byte[11] ;
+            System.arraycopy(bytes,0,tempBytes,0,11);
+            String msgHeader = new String(tempBytes);
+            if(msgHeader !=null && msgHeader.equals(DEVICE_FIND_MSG_HEADER)){
+
+                DeviceBean deviceBean = new DeviceBean();
+                //设备IP
+                deviceBean.setDeviceIp(deviceIP);
+                //端口 port
+                deviceBean.setDevicePort(9100);
+                //DHCP
+                deviceBean.setDHCPEnable(bytes[33] == 0 ? false:true);
+                //Mac地址
+                tempBytes = new byte[6];
+                System.arraycopy(bytes,11,tempBytes,0,6);
+                StringBuilder sb = new StringBuilder("");
+
+                for(int i=0;i<tempBytes.length;i++){
+                    sb.append(String.format("%02X", tempBytes[i]));
+                    if(i !=tempBytes.length-1){
+                        sb.append("-");
+                    }
+                }
+                deviceBean.setMacAddress(sb.toString());
+                mDeviceList.add(deviceBean);
+            }
+        }
+
+    }
+
+    /**
+     * 搜索开始时执行
+     * Called when the search starts
+     *
+     */
+    public abstract void onSearchStart();
+
+    /**
+     * 搜索结束后执行
+     * Called when the search finishs
+     * @param devicesList 搜索到的设备集合
+     */
+    public abstract void onSearchFinish(List devicesList);
+
+    /**
+     * 搜索出错
+     * Called when the search error occurs
+     * String msg 搜索出错信息
+     */
+    public abstract void onSearchError(String msg);
+
+    /**
+     * 设备Bean
+     *
+     */
+    public static class DeviceBean{
+        String deviceIp;      // IP地址
+        int devicePort;       // 端口
+        String MacAddress;    // 设备Mac地址
+        boolean DHCPEnable; //DHCP enable or disable
+
+        @Override
+        public int hashCode() {
+            return deviceIp.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o instanceof DeviceBean) {
+                return this.deviceIp.equals(((DeviceBean)o).getDeviceIp());
+            }
+            return super.equals(o);
+        }
+
+        public String getDeviceIp() {
+            return deviceIp;
+        }
+
+        public int getDevicePort() {
+            return devicePort;
+        }
+
+        public String getMacAddress() {
+            return MacAddress;
+        }
+
+        public boolean isDHCPEnable() {
+            return DHCPEnable;
+        }
+
+        public void setDeviceIp(String deviceIp) {
+            this.deviceIp = deviceIp;
+        }
+
+        public void setDevicePort(int devicePort) {
+            this.devicePort = devicePort;
+        }
+
+        public void setMacAddress(String MacAddress) {
+            this.MacAddress = MacAddress;
+        }
+
+        public void setDHCPEnable(boolean DHCPEnable) {
+            this.DHCPEnable = DHCPEnable;
+        }
+    }
+
+}
